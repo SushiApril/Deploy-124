@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
-import userData from '../data/users.json';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -22,19 +21,26 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
 
-    // Check credentials against dummy data
-    const user = userData.users.find(
-      (u) => u.email === email && u.password === password
-    );
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (user) {
-      localStorage.setItem('user', JSON.stringify({
-        name: user.name,
-        email: user.email
-      }));
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+
+      // Store user info in localStorage
+      localStorage.setItem('user', JSON.stringify(data.user));
       router.push('/dashboard');
-    } else {
-      setError('Invalid email or password');
+    } catch (err) {
+      setError(err.message || 'Failed to login');
     }
   };
 
@@ -68,7 +74,7 @@ export default function LoginPage() {
           <p className="mt-2 text-center text-sm text-gray-600">
             Or{' '}
             <button
-              onClick={() => router.push('/register')}
+              onClick={() => router.push('/signup')}
               className="font-medium text-indigo-600 hover:text-indigo-500"
             >
               create a new account
