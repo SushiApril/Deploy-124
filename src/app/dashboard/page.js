@@ -2,26 +2,53 @@
 
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [localUser, setLocalUser] = useState(null);
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/login');
-    }
-  }, [status, router]);
+    // Check authentication on mount and when status changes
+    const checkAuth = () => {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        setLocalUser(JSON.parse(userData));
+      } else if (status === 'unauthenticated' && !session) {
+        router.push('/login');
+      }
+    };
+    
+    checkAuth();
+  }, [status, router, session]);
 
-  const handleLogout = async () => {
-    await signOut({ callbackUrl: '/login' });
+  const handleLogout = () => {
+    if (localUser) {
+      localStorage.removeItem('user');
+      setLocalUser(null);
+    } else {
+      signOut({ callbackUrl: '/login' });
+    }
+    router.push('/login');
   };
 
-  if (status === 'loading') {
+  // Show loading state while checking authentication
+  if (status === 'loading' && !localUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-2xl text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
+  const user = localUser || session?.user;
+
+  // Show loading instead of immediate redirect
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-2xl text-gray-600">Checking authentication...</div>
       </div>
     );
   }
@@ -46,8 +73,11 @@ export default function DashboardPage() {
             <div className="border-t border-gray-200 pt-4">
               <h2 className="text-xl font-semibold text-gray-800">Your Profile</h2>
               <div className="mt-2 text-gray-600">
-                <p>Name: {session?.user?.name}</p>
-                <p>Email: {session?.user?.email}</p>
+                <p>Name: {user?.name}</p>
+                <p>Email: {user?.email}</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  Login method: {localUser ? 'Email/Password' : 'Google'}
+                </p>
               </div>
             </div>
           </div>

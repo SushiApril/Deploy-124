@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
-import { useEffect } from 'react';
-import Image from 'next/image';
+import userData from '../data/users.json';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const router = useRouter();
   const { status } = useSession();
 
@@ -20,8 +20,22 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Implement regular login logic here
-    console.log('Login attempt with:', { email });
+    setError('');
+
+    // Check credentials against dummy data
+    const user = userData.users.find(
+      (u) => u.email === email && u.password === password
+    );
+
+    if (user) {
+      localStorage.setItem('user', JSON.stringify({
+        name: user.name,
+        email: user.email
+      }));
+      router.push('/dashboard');
+    } else {
+      setError('Invalid email or password');
+    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -29,6 +43,7 @@ export default function LoginPage() {
       await signIn('google', { callbackUrl: '/dashboard' });
     } catch (error) {
       console.error('Error signing in with Google:', error);
+      setError('Error signing in with Google');
     }
   };
 
@@ -47,6 +62,9 @@ export default function LoginPage() {
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
             Sign in to your account
           </h2>
+          {error && (
+            <p className="mt-2 text-center text-sm text-red-600">{error}</p>
+          )}
           <p className="mt-2 text-center text-sm text-gray-600">
             Or{' '}
             <button
