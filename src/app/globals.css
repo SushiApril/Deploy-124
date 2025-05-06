@@ -24,3 +24,54 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+
+
+/* Calendar Styles */
+.calendar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+  grid-auto-rows: minmax(100px, auto); /* Ensures all rows are of equal height */
+}
+
+.calendar-cell {
+  border: 1px solid #ccc;
+  padding: 10px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.calendar-cell.header {
+  font-weight: bold;
+  background-color: #f0f0f0;
+}
+
+.calendar-cell span {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.calendar-cell span.green {
+  color: green;
+}
+
+.calendar-cell span.red {
+  color: red;
+}
+
+.calendar-cell span {
+  font-size: 1rem;
+  font-weight: 600;
+}
+

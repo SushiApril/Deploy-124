@@ -1,0 +1,38 @@
+/* Header.module.css */
+
+/* Style for the header box */
+.headerBox {
+    background-color: #f4f4f4;
+    border: 1px solid #ccc;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+  }
+  
+  /* Styling the header content */
+  .headerContent {
+    text-align: center;
+  }
+  
+  .headerContent h2 {
+    font-size: 2rem;
+    margin-bottom: 10px;
+  }
+  
+  .balanceInfo {
+    font-size: 1.2rem;
+    margin-top: 10px;
+  }
+  
+  .balanceInfo p {
+    margin: 5px 0;
+  }
+  
+  .balanceInfo p:first-child {
+    color: #2e8b57; /* Green for net gain */
+  }
+  
+  .balanceInfo p:last-child {
+    color: #000; /* Black for current balance */
+  }
+  
