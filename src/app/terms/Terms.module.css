@@ -1,0 +1,69 @@
+/* Terms.module.css */
+
+/* Scoped classes for Term page */
+.termsContainer {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+    color: #333;
+  }
+  
+  .headerBox {
+    background-color: #f4f4f4;
+    border: 1px solid #ccc;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+  }
+  
+  .headerContent {
+    text-align: center;
+  }
+  
+  .headerContent h1 {
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+  }
+  
+  .headerContent h2 {
+    font-size: 2rem;
+    margin-bottom: 10px;
+  }
+  
+  .balanceInfo {
+    font-size: 1.2rem;
+    margin-top: 10px;
+  }
+  
+  .balanceInfo p {
+    margin: 5px 0;
+  }
+  
+  .balanceInfo p:first-child {
+    color: #2e8b57; 
+  }
+  
+  .balanceInfo p:last-child {
+    color: #000; 
+  }
+  
+  /* T&S Sections */
+  .termsService, .privacyPolicy {
+    margin-bottom: 40px;
+  }
+  
+  .termsService ul, .privacyPolicy ul {
+    list-style-type: none;
+    padding: 0;
+  }
+  
+  .termsService li, .privacyPolicy li {
+    margin: 10px 0;
+    font-size: 1.1rem;
+  }
+  
+  .termsService strong, .privacyPolicy strong {
+    font-weight: bold;
+  }
+  
