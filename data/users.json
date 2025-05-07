@@ -14,6 +14,11 @@
       "email": "78@com.com",
       "password": "123456",
       "name": "a bb"
+    },
+    {
+      "email": "shreyas6@uci.edu",
+      "password": "Test123",
+      "name": "Shreya"
     }
   ]
 }

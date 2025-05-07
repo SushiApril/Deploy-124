@@ -48,14 +48,14 @@ export default function Navbar() {
                 About
               </Link>
               <Link
-                href="/contact"
+                href="/support"
                 className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                  pathname === '/contact'
+                  pathname === '/support'
                     ? 'border-indigo-500 text-gray-900'
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                 }`}
               >
-                Contact
+                Support
               </Link>
               {isLoggedIn && (
                 <Link
