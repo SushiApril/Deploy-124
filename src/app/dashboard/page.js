@@ -3,25 +3,28 @@
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import Link from 'next/link';
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [localUser, setLocalUser] = useState(null);
 
+  const fadeIn = {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.6 },
+  };
+
   useEffect(() => {
-    // Check authentication on mount and when status changes
-    const checkAuth = () => {
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        setLocalUser(JSON.parse(userData));
-      } else if (status === 'unauthenticated' && !session) {
-        router.push('/login');
-      }
-    };
-    
-    checkAuth();
-  }, [status, router, session]);
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setLocalUser(JSON.parse(userData));
+    } else if (status === 'unauthenticated' && !session) {
+      router.push('/login');
+    }
+  }, [status, session, router]);
 
   const handleLogout = () => {
     if (localUser) {
@@ -33,7 +36,8 @@ export default function DashboardPage() {
     router.push('/login');
   };
 
-  // Show loading state while checking authentication
+  const user = localUser || session?.user;
+
   if (status === 'loading' && !localUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -42,9 +46,6 @@ export default function DashboardPage() {
     );
   }
 
-  const user = localUser || session?.user;
-
-  // Show loading instead of immediate redirect
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -54,35 +55,88 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
-        <div className="bg-white shadow rounded-lg p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">
-              You are logged in! 🎉
-            </h1>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-            >
-              Sign Out
-            </button>
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pb-16">
+      {/* Header Banner */}
+      <motion.div
+        initial="initial"
+        animate="animate"
+        variants={fadeIn}
+        className="bg-indigo-600 text-white py-14 text-center px-4"
+      >
+        <h1 className="text-4xl font-bold mb-2">Welcome, {user.name?.split(' ')[0]} 👋</h1>
+        <p className="text-sm text-indigo-100">Track your expenses and manage your budget effectively.</p>
+        <Link href="/expense">
+          <button className="mt-6 bg-white text-indigo-700 px-5 py-2 rounded font-medium hover:bg-indigo-100 transition">
+            Add Expense
+          </button>
+        </Link>
+      </motion.div>
+
+      {/* Budgeting Tips */}
+      <motion.div
+        initial="initial"
+        animate="animate"
+        variants={fadeIn}
+        transition={{ delay: 0.3 }}
+        className="py-12 px-6 max-w-5xl mx-auto"
+      >
+        <h2 className="text-2xl font-bold mb-6 text-center text-gray-900">Budgeting Tips</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="bg-white p-6 rounded-lg shadow hover:shadow-md transition">
+            <h3 className="font-semibold text-gray-900 mb-2">Tip 1</h3>
+            <p className="text-sm text-gray-700 mb-2">Manage your expenses wisely.</p>
+            <div className="flex gap-2">
+              <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Budgeting</span>
+              <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Finance</span>
+            </div>
           </div>
-          
-          <div className="mt-4 space-y-4">
-            <div className="border-t border-gray-200 pt-4">
-              <h2 className="text-xl font-semibold text-gray-800">Your Profile</h2>
-              <div className="mt-2 text-gray-600">
-                <p>Name: {user?.name}</p>
-                <p>Email: {user?.email}</p>
-                <p className="text-sm text-gray-500 mt-2">
-                  Login method: {localUser ? 'Email/Password' : 'Google'}
-                </p>
-              </div>
+          <div className="bg-white p-6 rounded-lg shadow hover:shadow-md transition">
+            <h3 className="font-semibold text-gray-900 mb-2">Tip 2</h3>
+            <p className="text-sm text-gray-700 mb-2">Set saving goals for a secure future.</p>
+            <div className="flex gap-2">
+              <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Saving</span>
+              <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Goals</span>
             </div>
           </div>
         </div>
+      </motion.div>
+
+      {/* Budget Overview */}
+      <motion.div
+        initial="initial"
+        animate="animate"
+        variants={fadeIn}
+        transition={{ delay: 0.5 }}
+        className="py-12 px-6 max-w-5xl mx-auto"
+      >
+        <h2 className="text-2xl font-bold mb-6 text-center text-gray-900">Budget Overview</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+          <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-sm">
+            <h3 className="text-sm text-gray-500 mb-2">Total Expenses</h3>
+            <p className="text-xl font-semibold text-gray-900">$XXXX</p>
+            <p className="text-sm text-red-500">-5%</p>
+          </div>
+          <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-sm">
+            <h3 className="text-sm text-gray-500 mb-2">Remaining Budget</h3>
+            <p className="text-xl font-semibold text-gray-900">$XXXX</p>
+            <p className="text-sm text-green-500">+10%</p>
+          </div>
+          <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-sm">
+            <h3 className="text-sm text-gray-500 mb-2">Monthly Income</h3>
+            <p className="text-xl font-semibold text-gray-900">$XXXX</p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Logout Button */}
+      <div className="fixed top-4 right-4 z-10">
+        <button
+          onClick={handleLogout}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500 transition"
+        >
+          Sign Out
+        </button>
       </div>
     </div>
   );
-} 
+}
