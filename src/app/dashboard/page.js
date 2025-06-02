@@ -128,6 +128,39 @@ export default function DashboardPage() {
         </div>
       </motion.div>
 
+      {/* Personalized Saving Recommendations */}
+      <motion.div
+        initial="initial"
+        animate="animate"
+        variants={fadeIn}
+        transition={{ delay: 0.7 }}
+        className="py-12 px-6 max-w-5xl mx-auto"
+      >
+        <h2 className="text-2xl font-bold mb-6 text-center text-gray-900">Saving Recommendations</h2>
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="space-y-6">
+            {/* Placeholder Recommendation */}
+            <div className="border-l-4 border-indigo-500 pl-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Personalized Recommendations</h3>
+              <p className="text-gray-600 mb-2">Add more expense entries to receive personalized saving recommendations based on your spending patterns.</p>
+              <div className="flex gap-2">
+                <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Coming Soon</span>
+                <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Add Expenses</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Button */}
+          <div className="mt-6 text-center">
+            <Link href="/expense">
+              <button className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-500 transition">
+                Add Expenses
+              </button>
+            </Link>
+          </div>
+        </div>
+      </motion.div>
+
       {/* Logout Button */}
       <div className="fixed top-4 right-4 z-10">
         <button
