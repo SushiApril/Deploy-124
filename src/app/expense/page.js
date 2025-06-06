@@ -12,17 +12,37 @@ export default function ExpensePage() {
     category: '',
     amount: ''
   });
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setExpenses([...expenses, { ...formData, amount: parseFloat(formData.amount) }]);
-    setFormData({ date: '', description: '', category: '', amount: '' });
-    setShowForm(false);
+    setLoading(true);
+    const expenseData = { ...formData, amount: parseFloat(formData.amount) };
+
+    try {
+      const res = await fetch('/api/expense', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(expenseData),
+      });
+
+      if (res.ok) {
+        setExpenses([...expenses, expenseData]);
+        setFormData({ date: '', description: '', category: '', amount: '' });
+        setShowForm(false);
+      } else {
+        alert('Failed to add expense');
+      }
+    } catch (err) {
+      alert('Error submitting expense');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const totalAmount = expenses.reduce((sum, item) => sum + item.amount, 0);
@@ -103,9 +123,10 @@ export default function ExpensePage() {
             </div>
             <button
               type="submit"
+              disabled={loading}
               className="w-full bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-500 transition"
             >
-              Submit Expense
+              {loading ? 'Submitting...' : 'Submit Expense'}
             </button>
           </motion.form>
         )}
