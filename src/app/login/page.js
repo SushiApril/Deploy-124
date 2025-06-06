@@ -44,7 +44,8 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = async (e) => {
+    e.preventDefault(); // Prevent default form submission
     try {
       console.log('Initiating Google sign-in...');
       const result = await signIn('google', { 
@@ -94,6 +95,7 @@ export default function LoginPage() {
         {/* Google Sign In Button */}
         <div>
           <button
+            type="button"
             onClick={handleGoogleSignIn}
             className="w-full flex items-center justify-center gap-3 px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
           >
