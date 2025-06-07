@@ -1,16 +1,19 @@
-'use client';
+"use client";
 
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { ArrowRight, ArrowLeft } from 'lucide-react';
+import { CalendarDays } from 'lucide-react';
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [localUser, setLocalUser] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const fadeIn = {
     initial: { opacity: 0, y: 20 },
@@ -22,224 +25,162 @@ export default function DashboardPage() {
     const userData = localStorage.getItem('user');
     if (userData) {
       setLocalUser(JSON.parse(userData));
-    } else if (status === 'unauthenticated' && !session) {
+    } else if (status === 'unauthenticated') {
       router.push('/login');
     }
-  }, [status, session, router]);
+  }, [status, router]);
+
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    setLoading(true);
+    fetch('/api/financial/transactions')
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => setTransactions(data.transactions || []))
+      .catch(err => setError('Failed to load transactions.'))
+      .finally(() => setLoading(false));
+  }, [status]);
 
   const handleLogout = () => {
-    if (localUser) {
-      localStorage.removeItem('user');
-      setLocalUser(null);
-    } else {
-      signOut({ callbackUrl: '/login' });
-    }
+    localStorage.removeItem('user');
+    signOut({ callbackUrl: '/login' });
     router.push('/login');
   };
 
   const user = localUser || session?.user;
-
-  if (status === 'loading' && !localUser) {
+  if (status === 'loading' && !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-2xl text-gray-600">Loading...</div>
       </div>
     );
   }
-
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-2xl text-gray-600">Checking authentication...</div>
+        <div className="text-2xl text-gray-600">Please sign in.</div>
       </div>
     );
   }
 
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  const monthName = now.toLocaleString('default', { month: 'long' });
+
+  const thisMonthsTransactions = transactions.filter(tx => {
+    const txDate = new Date(tx.date);
+    return txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear;
+  });
+
+  const monthlyIncome = thisMonthsTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+  const monthlyExpenses = thisMonthsTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+  const monthlyBalance = monthlyIncome - monthlyExpenses;
+
+  const savingsRate = monthlyIncome ? ((monthlyBalance / monthlyIncome) * 100) : 0;
+  const cappedSavings = Math.min(savingsRate, 50);
+  const financialHealthScore = Math.round((cappedSavings / 50) * 100);
+
+  const healthEmoji = financialHealthScore >= 80 ? '💪' : financialHealthScore >= 50 ? '🙂' : financialHealthScore >= 20 ? '😟' : '😵';
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pb-16">
-      {/* Header Banner */}
-      <motion.div
-        initial="initial"
-        animate="animate"
-        variants={fadeIn}
-        className="bg-indigo-600 text-white py-14 text-center px-4"
-      >
-        <h1 className="text-4xl font-bold mb-2">
-          Welcome, {user.name?.split(' ')[0]} 👋
-        </h1>
-        <p className="text-sm text-indigo-100">
-          Track your expenses and manage your budget effectively.
-        </p>
-
-        {/* Action Buttons with Animated Arrows */}
-        <div className="mt-6 flex justify-center gap-4 relative">
-          <Link href="/expense">
-            <button className="bg-white text-indigo-700 px-5 py-2 rounded font-medium hover:bg-indigo-100 transition">
-              Add Expense
-            </button>
-          </Link>
-          <Link href="/income">
-            <button className="bg-white text-indigo-700 px-5 py-2 rounded font-medium hover:bg-green-100 transition">
-              Add Income
-            </button>
-          </Link>
-
-          {/* Left Arrow */}
-          <motion.div
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: [0, 1, 0], x: [0, -10, 0] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-            className="absolute left-[-2rem] top-1/2 transform -translate-y-1/2"
-          >
-            <ArrowRight size={24} className="text-white" />
-          </motion.div>
-
-          {/* Right Arrow */}
-          <motion.div
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: [0, 1, 0], x: [0, 10, 0] }}
-            transition={{ duration: 1.5, repeat: Infinity, delay: 0.5 }}
-            className="absolute right-[-2rem] top-1/2 transform -translate-y-1/2"
-          >
-            <ArrowLeft size={24} className="text-white" />
-          </motion.div>
-        </div>
-
-        {/* Tooltip */}
-        <motion.p
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.8 }}
-          className="text-center text-indigo-100 mt-2 italic"
-        >
-          Click both “Add Expense” and “Add Income” to track your full cash flow!
-        </motion.p>
-      </motion.div>
-
-      {/* Budgeting Tips */}
-      <motion.div
-        initial="initial"
-        animate="animate"
-        variants={fadeIn}
-        transition={{ delay: 0.3 }}
-        className="py-12 px-6 max-w-5xl mx-auto"
-      >
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-900">
-          Budgeting Tips
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div className="bg-white p-6 rounded-lg shadow hover:shadow-md transition">
-            <h3 className="font-semibold text-gray-900 mb-2">Tip 1</h3>
-            <p className="text-sm text-gray-700 mb-2">
-              Manage your expenses wisely.
-            </p>
-            <div className="flex gap-2">
-              <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">
-                Budgeting
-              </span>
-              <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">
-                Finance
-              </span>
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow hover:shadow-md transition">
-            <h3 className="font-semibold text-gray-900 mb-2">Tip 2</h3>
-            <p className="text-sm text-gray-700 mb-2">
-              Set saving goals for a secure future.
-            </p>
-            <div className="flex gap-2">
-              <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">
-                Saving
-              </span>
-              <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">
-                Goals
-              </span>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Budget Overview */}
-      <motion.div
-        initial="initial"
-        animate="animate"
-        variants={fadeIn}
-        transition={{ delay: 0.5 }}
-        className="py-12 px-6 max-w-5xl mx-auto"
-      >
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-900">
-          Budget Overview
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
-          <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-sm">
-            <h3 className="text-sm text-gray-500 mb-2">Total Expenses</h3>
-            <p className="text-xl font-semibold text-gray-900">$XXXX</p>
-            <p className="text-sm text-red-500">-5%</p>
-          </div>
-          <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-sm">
-            <h3 className="text-sm text-gray-500 mb-2">
-              Remaining Budget
-            </h3>
-            <p className="text-xl font-semibold text-gray-900">$XXXX</p>
-            <p className="text-sm text-green-500">+10%</p>
-          </div>
-          <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-sm">
-            <h3 className="text-sm text-gray-500 mb-2">Monthly Income</h3>
-            <p className="text-xl font-semibold text-gray-900">$XXXX</p>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Personalized Saving Recommendations */}
-      <motion.div
-        initial="initial"
-        animate="animate"
-        variants={fadeIn}
-        transition={{ delay: 0.7 }}
-        className="py-12 px-6 max-w-5xl mx-auto"
-      >
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-900">
-          Saving Recommendations
-        </h2>
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="space-y-6">
-            {/* Placeholder Recommendation */}
-            <div className="border-l-4 border-indigo-500 pl-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Personalized Recommendations
-              </h3>
-              <p className="text-gray-600 mb-2">
-                Add more expense entries to receive personalized saving
-                recommendations based on your spending patterns.
-              </p>
-              <div className="flex gap-2">
-                <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">
-                  Coming Soon
-                </span>
-                <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">
-                  Add Expenses
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Action Button */}
-          <div className="mt-6 text-center">
+      <motion.div {...fadeIn} className="bg-indigo-600 text-white mt-4 py-14 px-6 shadow-md">
+        <div className="max-w-4xl mx-auto text-center space-y-3">
+          <h1 className="text-4xl font-bold">Welcome back, {user.name?.split(' ')[0]} 👋</h1>
+          <p className="text-md text-indigo-100">
+            Staying on top of your finances starts here. Log any income or expenses for <span className="font-semibold">{monthName}</span> to keep your budget updated.
+          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-4">
             <Link href="/expense">
-              <button className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-500 transition">
-                Add Expenses
+              <button className="bg-white text-indigo-700 px-5 py-2 rounded font-medium hover:bg-indigo-100 transition">
+                Add Expense
+              </button>
+            </Link>
+            <Link href="/income">
+              <button className="bg-white text-indigo-700 px-5 py-2 rounded font-medium hover:bg-green-100 transition">
+                Add Income
+              </button>
+            </Link>
+            <Link href="/calendar">
+              <button className="bg-white text-indigo-700 px-5 py-2 rounded font-medium hover:bg-indigo-100 transition flex items-center gap-1">
+                <CalendarDays size={18} /> Calendar
               </button>
             </Link>
           </div>
         </div>
       </motion.div>
 
-      {/* Logout Button */}
+      <div className="max-w-5xl mx-auto px-6 space-y-10">
+        <motion.div {...fadeIn} className="pt-8">
+          <h2 className="text-2xl font-bold mb-4 text-gray-900 text-center">{monthName}'s Summary</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
+            <div className="bg-white p-6 rounded-lg shadow-md text-center">
+              <h3 className="text-sm text-gray-500">Expenses</h3>
+              <p className="text-2xl font-semibold text-red-600">${monthlyExpenses}</p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow-md text-center">
+              <h3 className="text-sm text-gray-500">Income</h3>
+              <p className="text-2xl font-semibold text-green-600">${monthlyIncome}</p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow-md text-center">
+              <h3 className="text-sm text-gray-500">Remaining</h3>
+              <p className="text-2xl font-semibold text-blue-600">${monthlyBalance}</p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow-md text-center">
+              <h3 className="text-sm text-gray-500">Health Score</h3>
+              <p className="text-2xl font-semibold text-indigo-600">{financialHealthScore}/100 {healthEmoji}</p>
+            </div>
+          </div>
+          <div className="mt-6 text-center">
+            <Link href="/summary">
+              <button className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-full text-sm shadow transition-all">
+                View Full Summary
+              </button>
+            </Link>
+          </div>
+        </motion.div>
+
+        <motion.div {...fadeIn} className="py-6">
+          <h2 className="text-2xl font-bold mb-4 text-gray-900">Budgeting Tips</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="bg-white p-6 rounded-lg shadow hover:shadow-md transition">
+              <h3 className="font-semibold text-gray-900 mb-2">Tip 1</h3>
+              <p className="text-sm text-gray-700">Manage your expenses wisely.</p>
+              <div className="mt-2 flex gap-2 text-xs text-white">
+                <span className="bg-blue-500 rounded-full px-2 py-1">Budgeting</span>
+                <span className="bg-purple-500 rounded-full px-2 py-1">Finance</span>
+              </div>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow hover:shadow-md transition">
+              <h3 className="font-semibold text-gray-900 mb-2">Tip 2</h3>
+              <p className="text-sm text-gray-700">Set saving goals for a secure future.</p>
+              <div className="mt-2 flex gap-2 text-xs text-white">
+                <span className="bg-green-500 rounded-full px-2 py-1">Saving</span>
+                <span className="bg-pink-500 rounded-full px-2 py-1">Goals</span>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div {...fadeIn} className="py-6">
+          <h2 className="text-2xl font-bold mb-4 text-gray-900">Saving Recommendations</h2>
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h3 className="font-semibold text-gray-900 mb-2">Personalized Recommendations</h3>
+            <p className="text-sm text-gray-700 mb-4">
+              Add more expense entries to receive personalized saving recommendations based on your spending patterns.
+            </p>
+            <div className="flex gap-2">
+              <span className="bg-gray-200 px-2 py-1 rounded text-xs">Coming Soon</span>
+              <Link href="/expense">
+                <button className="bg-indigo-600 text-white px-4 py-1 rounded text-sm">Add Expenses</button>
+              </Link>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
       <div className="fixed top-4 right-4 z-10">
-        <button
-          onClick={handleLogout}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500 transition"
-        >
+        <button onClick={handleLogout} className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500 transition">
           Sign Out
         </button>
       </div>

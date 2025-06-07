@@ -16,14 +16,12 @@ import {
   Legend
 } from 'recharts';
 
-// Formatters
 const dateFormatter = (iso) => {
   const d = new Date(iso);
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 const currency = (v) => `$${v.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 
-// Preset ranges
 const today = new Date();
 const formatYMD = (d) => d.toISOString().slice(0, 10);
 const presetRanges = [
@@ -39,11 +37,8 @@ export default function SummaryPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showAll, setShowAll] = useState(false);
-
-  // date range state
   const [range, setRange] = useState([new Date(today.getTime() - 6 * 86400000), today]);
 
-  // fetch transactions
   useEffect(() => {
     if (status !== 'authenticated') return;
     setLoading(true);
@@ -54,7 +49,6 @@ export default function SummaryPage() {
       .finally(() => setLoading(false));
   }, [status]);
 
-  // compute summary and filter transactions
   const { totalIncome, totalExpense, net, categoryData, timeline, filteredTx } = useMemo(() => {
     const [start, end] = range;
     let income = 0,
@@ -78,35 +72,28 @@ export default function SummaryPage() {
     });
 
     const categoryData = Object.entries(catMap).map(([name, value]) => ({ name, value }));
+
+    let cumulativeIncome = 0, cumulativeExpense = 0;
     const timeline = [];
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       const key = formatYMD(d);
       const { income: inc = 0, expense: exp = 0 } = dayMap[key] || {};
-      timeline.push({ date: key, Net: inc - exp });
+      cumulativeIncome += inc;
+      cumulativeExpense += exp;
+      timeline.push({ date: key, income: cumulativeIncome, expense: cumulativeExpense });
     }
 
     return { totalIncome: income, totalExpense: expense, net: income - expense, categoryData, timeline, filteredTx };
   }, [transactions, range]);
 
-  if (status === 'loading')
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p>Loading...</p>
-      </div>
-    );
-  if (status === 'unauthenticated')
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p>Please sign in.</p>
-      </div>
-    );
+  if (status === 'loading') return <div className="min-h-screen flex items-center justify-center bg-gray-50"><p>Loading...</p></div>;
+  if (status === 'unauthenticated') return <div className="min-h-screen flex items-center justify-center bg-gray-50"><p>Please sign in.</p></div>;
 
   const COLORS = ['#4ade80', '#f87171', '#60a5fa', '#fbbf24', '#a78bfa'];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pb-16">
       <div className="max-w-5xl mx-auto px-6 space-y-6">
-        {/* Date Range Picker */}
         <motion.div className="bg-indigo-600 text-white p-6 rounded-lg shadow-md flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex flex-wrap gap-2">
             {presetRanges.map((p, i) => (
@@ -139,7 +126,6 @@ export default function SummaryPage() {
           </div>
         </motion.div>
 
-        {/* KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             { label: 'Income', value: totalIncome, color: 'text-green-600' },
@@ -158,7 +144,6 @@ export default function SummaryPage() {
           ))}
         </div>
 
-        {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <motion.div className="bg-white p-6 rounded-lg shadow-md">
             <h3 className="text-lg font-semibold mb-4">Expenses by Category</h3>
@@ -179,20 +164,20 @@ export default function SummaryPage() {
           </motion.div>
 
           <motion.div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-lg font-semibold mb-4">Net Cash Over Time</h3>
+            <h3 className="text-lg font-semibold mb-4">Income vs Expense Over Time</h3>
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={timeline} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                 <XAxis dataKey="date" tickFormatter={dateFormatter} />
                 <YAxis />
                 <Tooltip formatter={val => currency(val)} />
                 <Legend />
-                <Line type="monotone" dataKey="Net" stroke="#4ade80" dot={false} />
+                <Line type="monotone" dataKey="income" stroke="#22c55e" dot={false} name="Income" />
+                <Line type="monotone" dataKey="expense" stroke="#ef4444" dot={false} name="Expense" />
               </LineChart>
             </ResponsiveContainer>
           </motion.div>
         </div>
 
-        {/* Recent Transactions */}
         <motion.div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">Recent Transactions</h3>
