@@ -2,7 +2,7 @@
 
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { CalendarDays } from 'lucide-react';
@@ -84,7 +84,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pb-16">
-      <motion.div {...fadeIn} className="bg-indigo-600 text-white mt-4 py-14 px-6 shadow-md">
+      <motion.div {...fadeIn} className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 text-white mt-4 py-14 px-6 shadow-md">
         <div className="max-w-4xl mx-auto text-center space-y-3">
           <h1 className="text-4xl font-bold">Welcome back, {user.name?.split(' ')[0]} 👋</h1>
           <p className="text-md text-indigo-100">
@@ -114,21 +114,27 @@ export default function DashboardPage() {
         <motion.div {...fadeIn} className="pt-8">
           <h2 className="text-2xl font-bold mb-4 text-gray-900 text-center">{monthName}'s Summary</h2>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow-md text-center">
+            <div className="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
               <h3 className="text-sm text-gray-500">Expenses</h3>
               <p className="text-2xl font-semibold text-red-600">${monthlyExpenses}</p>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-md text-center">
+            <div className="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
               <h3 className="text-sm text-gray-500">Income</h3>
               <p className="text-2xl font-semibold text-green-600">${monthlyIncome}</p>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-md text-center">
+            <div className="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
               <h3 className="text-sm text-gray-500">Remaining</h3>
               <p className="text-2xl font-semibold text-blue-600">${monthlyBalance}</p>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-md text-center">
+            <div className="bg-white p-6 rounded-lg shadow-md text-center hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
               <h3 className="text-sm text-gray-500">Health Score</h3>
-              <p className="text-2xl font-semibold text-indigo-600">{financialHealthScore}/100 {healthEmoji}</p>
+              <motion.p
+                className="text-2xl font-semibold text-indigo-600"
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ repeat: Infinity, duration: 1.5 }}
+              >
+                {financialHealthScore}/100 {healthEmoji}
+              </motion.p>
             </div>
           </div>
           <div className="mt-6 text-center">
