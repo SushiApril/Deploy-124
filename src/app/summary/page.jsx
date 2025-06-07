@@ -1,196 +1,224 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useSession } from 'next-auth/react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Legend
+} from 'recharts';
 
-// Friendly display formatters
-const dateFormatter = new Intl.DateTimeFormat('en-US', {
-  month: 'short', day: 'numeric', year: 'numeric'
-});
-function friendlyDayLabel(iso) {
+// Formatters
+const dateFormatter = (iso) => {
   const d = new Date(iso);
-  const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
-  return `${dateFormatter.format(d)} (${weekday})`;
-}
-function friendlyWeekLabel(iso) {
-  const d = new Date(iso);
-  return `Week of ${dateFormatter.format(d)}`;
-}
-function friendlyMonthLabel(iso) {
-  const [year, month] = iso.split('-');
-  const d = new Date(Number(year), Number(month) - 1);
-  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-}
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+const currency = (v) => `$${v.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+
+// Preset ranges
+const today = new Date();
+const formatYMD = (d) => d.toISOString().slice(0, 10);
+const presetRanges = [
+  { label: 'Last 7 days', days: 7 },
+  { label: 'Last 30 days', days: 30 },
+  { label: 'This month', custom: (d) => [new Date(d.getFullYear(), d.getMonth(), 1), d] },
+  { label: 'Year to date', custom: (d) => [new Date(d.getFullYear(), 0, 1), d] }
+];
 
 export default function SummaryPage() {
   const { data: session, status } = useSession();
-  const [frequency, setFrequency] = useState('monthly');
-  const [summary, setSummary] = useState({});
   const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState(null);
-  const [expanded, setExpanded] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [showAll, setShowAll] = useState(false);
 
-  // Fetch summary + all txns on freq or auth change
+  // date range state
+  const [range, setRange] = useState([new Date(today.getTime() - 6 * 86400000), today]);
+
+  // fetch transactions
   useEffect(() => {
     if (status !== 'authenticated') return;
     setLoading(true);
-    setError(null);
-
-    Promise.all([
-      fetch(`/api/financial/summary?freq=${frequency}`)
-        .then(r => r.ok ? r.json() : Promise.reject()),
-      fetch(`/api/financial/transactions`)
-        .then(r => r.ok ? r.json() : Promise.reject())
-    ])
-      .then(([sumData, txData]) => {
-        setSummary(sumData.summary || {});
-        setTransactions(txData.transactions || []);
-        setExpanded({});
-      })
-      .catch(() => setError('Failed to load data.'))
+    fetch('/api/financial/transactions')
+      .then(r => (r.ok ? r.json() : Promise.reject()))
+      .then(data => setTransactions(data.transactions || []))
+      .catch(() => setError('Failed to load transactions.'))
       .finally(() => setLoading(false));
-  }, [frequency, status]);
+  }, [status]);
 
-  if (status === 'loading') {
-    return <p className="text-center mt-10">Loading session…</p>;
-  }
-  if (status === 'unauthenticated') {
-    return <p className="text-center mt-10">Please sign in to view your summary.</p>;
-  }
+  // compute summary and filter transactions
+  const { totalIncome, totalExpense, net, categoryData, timeline, filteredTx } = useMemo(() => {
+    const [start, end] = range;
+    let income = 0,
+      expense = 0;
+    const catMap = {};
+    const dayMap = {};
+    const filteredTx = [];
 
-  const fadeIn = {
-    initial: { opacity: 0, y: 10 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.5 },
-  };
-
-  const labelFn =
-    frequency === 'daily'
-      ? friendlyDayLabel
-      : frequency === 'weekly'
-      ? friendlyWeekLabel
-      : friendlyMonthLabel;
-
-  // Group by the raw key
-  const txByRaw = transactions.reduce((acc, tx) => {
-    let key;
-    if (frequency === 'monthly') {
-      key = tx.date.slice(0, 7);       // "YYYY-MM"
-    } else {
-      key = tx.date.slice(0, 10);      // "YYYY-MM-DD"
-    }
-    (acc[key] = acc[key] || []).push(tx);
-    return acc;
-  }, {});
-
-  // Prepare and sort periods descending by date string
-  const periods = Object.entries(summary)
-    .sort(([aKey], [bKey]) => {
-      // parse aKey, bKey into Date for proper sort
-      const dateA = frequency === 'monthly'
-        ? new Date(`${aKey}-01`)
-        : new Date(aKey);
-      const dateB = frequency === 'monthly'
-        ? new Date(`${bKey}-01`)
-        : new Date(bKey);
-      return dateB - dateA;
+    transactions.forEach(tx => {
+      const d = new Date(tx.date);
+      if (d < start || d > end) return;
+      filteredTx.push(tx);
+      if (tx.type === 'income') income += tx.amount;
+      else {
+        expense += tx.amount;
+        catMap[tx.category] = (catMap[tx.category] || 0) + tx.amount;
+      }
+      const key = formatYMD(d);
+      dayMap[key] = dayMap[key] || { date: key, income: 0, expense: 0 };
+      dayMap[key][tx.type] += tx.amount;
     });
 
-  const toggle = (raw) => {
-    setExpanded(prev => ({ ...prev, [raw]: !prev[raw] }));
-  };
+    const categoryData = Object.entries(catMap).map(([name, value]) => ({ name, value }));
+    const timeline = [];
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const key = formatYMD(d);
+      const { income: inc = 0, expense: exp = 0 } = dayMap[key] || {};
+      timeline.push({ date: key, Net: inc - exp });
+    }
+
+    return { totalIncome: income, totalExpense: expense, net: income - expense, categoryData, timeline, filteredTx };
+  }, [transactions, range]);
+
+  if (status === 'loading')
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <p>Loading...</p>
+      </div>
+    );
+  if (status === 'unauthenticated')
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <p>Please sign in.</p>
+      </div>
+    );
+
+  const COLORS = ['#4ade80', '#f87171', '#60a5fa', '#fbbf24', '#a78bfa'];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pb-16">
-      {/* Header */}
-      <motion.div {...fadeIn} className="bg-indigo-600 text-white py-14 text-center px-4">
-        <h1 className="text-4xl font-bold mb-2">Financial Summaries</h1>
-        <p className="text-sm text-indigo-100">Roll up your transactions by day, week, or month</p>
-      </motion.div>
-
-      {/* Frequency Selector */}
-      <motion.div {...fadeIn} transition={{ delay: 0.2 }} className="flex justify-center mt-8 space-x-4">
-        {['daily','weekly','monthly'].map(freq => (
-          <button
-            key={freq}
-            onClick={() => setFrequency(freq)}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
-              frequency === freq
-                ? 'bg-indigo-600 text-white'
-                : 'bg-white text-indigo-600 border border-indigo-600 hover:bg-indigo-100'
-            }`}
-          >
-            {freq[0].toUpperCase() + freq.slice(1)}
-          </button>
-        ))}
-      </motion.div>
-
-      {/* Table */}
-      <motion.div {...fadeIn} transition={{ delay: 0.4 }} className="max-w-4xl mx-auto mt-6 px-4">
-        {loading && <p className="text-center text-gray-600">Loading data…</p>}
-        {error   && <p className="text-center text-red-600">{error}</p>}
-        {!loading && !error && periods.length === 0 && (
-          <p className="text-center text-gray-600">No data available.</p>
-        )}
-
-        {!loading && !error && periods.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full table-auto border-collapse">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="px-4 py-2" />
-                  <th className="px-4 py-2 text-left">Period</th>
-                  <th className="px-4 py-2 text-right">Income</th>
-                  <th className="px-4 py-2 text-right">Expense</th>
-                  <th className="px-4 py-2 text-right">Net</th>
-                </tr>
-              </thead>
-              <tbody>
-                {periods.map(([raw,{income,expense,net}])=>(
-                  <React.Fragment key={raw}>
-                    <tr
-                      className="cursor-pointer bg-white hover:bg-gray-50"
-                      onClick={()=>toggle(raw)}
-                    >
-                      <td className="px-4 py-2">
-                        {expanded[raw]
-                          ? <ChevronDown size={20} className="text-indigo-600"/>
-                          : <ChevronRight size={20} className="text-indigo-600"/>}
-                      </td>
-                      <td className="px-4 py-2">{labelFn(raw)}</td>
-                      <td className="px-4 py-2 text-right text-green-600">${income}</td>
-                      <td className="px-4 py-2 text-right text-red-600">${expense}</td>
-                      <td className={`px-4 py-2 text-right font-semibold ${
-                        net>=0?'text-green-800':'text-red-800'
-                      }`}>${net}</td>
-                    </tr>
-
-                    {expanded[raw] && (txByRaw[raw]||[]).map((tx,i)=>(
-                      <tr key={i} className="bg-gray-50">
-                        <td/>
-                        <td className="px-4 py-1 text-sm text-gray-600">
-                          {new Date(tx.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})} — {tx.description}
-                        </td>
-                        <td className="px-4 py-1 text-sm text-right text-green-600">
-                          {tx.type==='income'?`+${tx.amount}`:''}
-                        </td>
-                        <td className="px-4 py-1 text-sm text-right text-red-600">
-                          {tx.type==='expense'?`−${tx.amount}`:''}
-                        </td>
-                        <td/>
-                      </tr>
-                    ))}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
+      <div className="max-w-5xl mx-auto px-6 space-y-6">
+        {/* Date Range Picker */}
+        <motion.div className="bg-indigo-600 text-white p-6 rounded-lg shadow-md flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+          <div className="flex flex-wrap gap-2">
+            {presetRanges.map((p, i) => (
+              <button
+                key={i}
+                onClick={() => {
+                  if (p.custom) setRange(p.custom(new Date()));
+                  else setRange([new Date(today.getTime() - (p.days - 1) * 86400000), today]);
+                }}
+                className="px-3 py-1 bg-white text-indigo-700 rounded hover:bg-indigo-200 transition"
+              >
+                {p.label}
+              </button>
+            ))}
           </div>
-        )}
-      </motion.div>
+          <div className="flex items-center space-x-2">
+            <input
+              type="date"
+              value={formatYMD(range[0])}
+              onChange={e => setRange([new Date(e.target.value), range[1]])}
+              className="border px-2 py-1 bg-white text-indigo-700 rounded"
+            />
+            <span>to</span>
+            <input
+              type="date"
+              value={formatYMD(range[1])}
+              onChange={e => setRange([range[0], new Date(e.target.value)])}
+              className="border px-2 py-1 bg-white text-indigo-700 rounded"
+            />
+          </div>
+        </motion.div>
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            { label: 'Income', value: totalIncome, color: 'text-green-600' },
+            { label: 'Expense', value: totalExpense, color: 'text-red-600' },
+            { label: 'Net', value: net, color: net >= 0 ? 'text-green-800' : 'text-red-800' },
+            { label: 'Savings Rate', value: totalIncome ? (net / totalIncome * 100).toFixed(1) : 0, suffix: '%', color: 'text-blue-600' }
+          ].map((k, i) => (
+            <motion.div
+              key={i}
+              className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition"
+              whileHover={{ y: -2 }}
+            >
+              <div className="text-sm text-gray-500">{k.label}</div>
+              <div className={`text-2xl font-semibold mt-1 ${k.color}`}> {currency(k.value)}{k.suffix || ''} </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <motion.div className="bg-white p-6 rounded-lg shadow-md">
+            <h3 className="text-lg font-semibold mb-4">Expenses by Category</h3>
+            {categoryData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie data={categoryData} dataKey="value" nameKey="name" outerRadius={80} label>
+                    {categoryData.map((e, idx) => (
+                      <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={val => currency(val)} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-gray-500">No expenses</p>
+            )}
+          </motion.div>
+
+          <motion.div className="bg-white p-6 rounded-lg shadow-md">
+            <h3 className="text-lg font-semibold mb-4">Net Cash Over Time</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={timeline} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                <XAxis dataKey="date" tickFormatter={dateFormatter} />
+                <YAxis />
+                <Tooltip formatter={val => currency(val)} />
+                <Legend />
+                <Line type="monotone" dataKey="Net" stroke="#4ade80" dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </motion.div>
+        </div>
+
+        {/* Recent Transactions */}
+        <motion.div className="bg-white p-6 rounded-lg shadow-md">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Recent Transactions</h3>
+            <button
+              onClick={() => setShowAll(!showAll)}
+              className="text-indigo-600 hover:underline text-sm"
+            >
+              {showAll ? 'Show Less' : 'Show All'}
+            </button>
+          </div>
+          <ul className="space-y-2 max-h-64 overflow-y-auto">
+            {(showAll ? filteredTx : filteredTx.slice(0, 5))
+              .sort((a, b) => new Date(b.date) - new Date(a.date))
+              .map((tx, i) => (
+                <li key={i} className="flex justify-between text-sm">
+                  <span>
+                    {dateFormatter(tx.date)} — {tx.description}
+                  </span>
+                  <span className={tx.type === 'income' ? 'text-green-600' : 'text-red-600'}>
+                    {tx.type === 'income' ? '+' : '-'}{currency(tx.amount)}
+                  </span>
+                </li>
+              ))}
+          </ul>
+        </motion.div>
+      </div>
     </div>
   );
 }

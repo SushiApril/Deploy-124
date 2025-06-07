@@ -1,10 +1,23 @@
 'use client';
 
 import { useState } from 'react';
+import useSWR from 'swr';
 import { motion } from 'framer-motion';
 
+const fetcher = async (url) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    const msg = await res.text().catch(() => res.statusText);
+    throw new Error(`API error: ${res.status} ${msg}`);
+  }
+  const json = await res.json();
+  if (!json.incomes || !Array.isArray(json.incomes)) {
+    throw new Error('Unexpected shape: ' + JSON.stringify(json));
+  }
+  return json.incomes;
+};
+
 export default function IncomePage() {
-  const [incomes, setIncomes] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     date: '',
@@ -14,43 +27,51 @@ export default function IncomePage() {
   });
   const [loading, setLoading] = useState(false);
 
-  // Handle form input changes
+  // 1️⃣ Load & revalidate
+  const { data: incomes = [], error, mutate } = useSWR(
+    '/api/income',
+    fetcher,
+    { refreshInterval: 30000 }
+  );
+
+  if (error) return <p className="text-red-600">Error loading incomes:<br/>{error.message}</p>;
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Submit new income
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
-    const incomeData = {
-      ...formData,
-      amount: parseFloat(formData.amount)
-    };
 
     try {
       const res = await fetch('/api/income', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(incomeData),
+        body: JSON.stringify({
+          ...formData,
+          amount: parseFloat(formData.amount)
+        }),
       });
 
-      if (!res.ok) throw new Error('Failed to add income');
+      if (!res.ok) throw new Error(await res.text());
+      const saved = await res.json(); // should include _id
 
-      setIncomes([...incomes, incomeData]);
+      // 2️⃣ Append to cache
+      await mutate(prev => [...prev, saved], false);
+
       setFormData({ date: '', description: '', source: '', amount: '' });
       setShowForm(false);
     } catch (err) {
-      alert(err.message);
+      console.error(err);
+      alert('Failed to add income: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Compute total income
-  const totalIncome = incomes.reduce((sum, inc) => sum + inc.amount, 0);
+  const totalIncome = incomes.reduce((sum, x) => sum + x.amount, 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-12 px-4 sm:px-6 lg:px-8">
@@ -66,7 +87,7 @@ export default function IncomePage() {
 
         <div className="flex justify-end mb-4">
           <button
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => setShowForm(v => !v)}
             className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-500 transition"
           >
             {showForm ? 'Cancel' : 'Add Income'}
@@ -81,51 +102,22 @@ export default function IncomePage() {
             transition={{ duration: 0.5 }}
             className="mb-6 p-6 bg-white rounded-lg shadow space-y-4"
           >
-            <div>
-              <label className="block text-sm font-medium text-gray-800 mb-1">Date</label>
-              <input
-                type="date"
-                name="date"
-                value={formData.date}
-                onChange={handleChange}
-                required
-                className="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-2 focus:ring-green-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-800 mb-1">Description</label>
-              <input
-                type="text"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                required
-                className="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-2 focus:ring-green-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-800 mb-1">Source</label>
-              <input
-                type="text"
-                name="source"
-                value={formData.source}
-                onChange={handleChange}
-                required
-                className="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-2 focus:ring-green-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-800 mb-1">Amount</label>
-              <input
-                type="number"
-                name="amount"
-                value={formData.amount}
-                onChange={handleChange}
-                required
-                step="0.01"
-                className="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-2 focus:ring-green-500 focus:outline-none"
-              />
-            </div>
+            {['date','description','source','amount'].map(field => (
+              <div key={field}>
+                <label className="block text-sm font-medium text-gray-800 mb-1">
+                  {field.charAt(0).toUpperCase() + field.slice(1)}
+                </label>
+                <input
+                  type={field === 'amount' ? 'number' : field === 'date' ? 'date' : 'text'}
+                  name={field}
+                  value={formData[field]}
+                  onChange={handleChange}
+                  required
+                  step={field === 'amount' ? '0.01' : undefined}
+                  className="w-full border border-gray-300 rounded-md px-4 py-2 focus:ring-2 focus:ring-green-500 focus:outline-none"
+                />
+              </div>
+            ))}
             <button
               type="submit"
               disabled={loading}
@@ -146,8 +138,8 @@ export default function IncomePage() {
             </tr>
           </thead>
           <tbody>
-            {incomes.map((inc, idx) => (
-              <tr key={idx} className="text-gray-800">
+            {incomes.map(inc => (
+              <tr key={inc._id} className="text-gray-800">
                 <td className="border px-4 py-2">{inc.date}</td>
                 <td className="border px-4 py-2">{inc.description}</td>
                 <td className="border px-4 py-2">{inc.source}</td>
@@ -156,7 +148,7 @@ export default function IncomePage() {
             ))}
             {incomes.length > 0 && (
               <tr className="font-semibold text-gray-900">
-                <td className="border px-4 py-2" colSpan="3">Total</td>
+                <td className="border px-4 py-2" colSpan={3}>Total</td>
                 <td className="border px-4 py-2">${totalIncome.toFixed(2)}</td>
               </tr>
             )}
