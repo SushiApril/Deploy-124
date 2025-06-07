@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { ArrowRight, ArrowLeft } from 'lucide-react';
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
@@ -63,13 +64,56 @@ export default function DashboardPage() {
         variants={fadeIn}
         className="bg-indigo-600 text-white py-14 text-center px-4"
       >
-        <h1 className="text-4xl font-bold mb-2">Welcome, {user.name?.split(' ')[0]} 👋</h1>
-        <p className="text-sm text-indigo-100">Track your expenses and manage your budget effectively.</p>
-        <Link href="/expense">
-          <button className="mt-6 bg-white text-indigo-700 px-5 py-2 rounded font-medium hover:bg-indigo-100 transition">
-            Add Expense
-          </button>
-        </Link>
+        <h1 className="text-4xl font-bold mb-2">
+          Welcome, {user.name?.split(' ')[0]} 👋
+        </h1>
+        <p className="text-sm text-indigo-100">
+          Track your expenses and manage your budget effectively.
+        </p>
+
+        {/* Action Buttons with Animated Arrows */}
+        <div className="mt-6 flex justify-center gap-4 relative">
+          <Link href="/expense">
+            <button className="bg-white text-indigo-700 px-5 py-2 rounded font-medium hover:bg-indigo-100 transition">
+              Add Expense
+            </button>
+          </Link>
+          <Link href="/income">
+            <button className="bg-white text-indigo-700 px-5 py-2 rounded font-medium hover:bg-green-100 transition">
+              Add Income
+            </button>
+          </Link>
+
+          {/* Left Arrow */}
+          <motion.div
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: [0, 1, 0], x: [0, -10, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+            className="absolute left-[-2rem] top-1/2 transform -translate-y-1/2"
+          >
+            <ArrowRight size={24} className="text-white" />
+          </motion.div>
+
+          {/* Right Arrow */}
+          <motion.div
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: [0, 1, 0], x: [0, 10, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity, delay: 0.5 }}
+            className="absolute right-[-2rem] top-1/2 transform -translate-y-1/2"
+          >
+            <ArrowLeft size={24} className="text-white" />
+          </motion.div>
+        </div>
+
+        {/* Tooltip */}
+        <motion.p
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.8 }}
+          className="text-center text-indigo-100 mt-2 italic"
+        >
+          Click both “Add Expense” and “Add Income” to track your full cash flow!
+        </motion.p>
       </motion.div>
 
       {/* Budgeting Tips */}
@@ -80,22 +124,36 @@ export default function DashboardPage() {
         transition={{ delay: 0.3 }}
         className="py-12 px-6 max-w-5xl mx-auto"
       >
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-900">Budgeting Tips</h2>
+        <h2 className="text-2xl font-bold mb-6 text-center text-gray-900">
+          Budgeting Tips
+        </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div className="bg-white p-6 rounded-lg shadow hover:shadow-md transition">
             <h3 className="font-semibold text-gray-900 mb-2">Tip 1</h3>
-            <p className="text-sm text-gray-700 mb-2">Manage your expenses wisely.</p>
+            <p className="text-sm text-gray-700 mb-2">
+              Manage your expenses wisely.
+            </p>
             <div className="flex gap-2">
-              <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Budgeting</span>
-              <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Finance</span>
+              <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">
+                Budgeting
+              </span>
+              <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">
+                Finance
+              </span>
             </div>
           </div>
           <div className="bg-white p-6 rounded-lg shadow hover:shadow-md transition">
             <h3 className="font-semibold text-gray-900 mb-2">Tip 2</h3>
-            <p className="text-sm text-gray-700 mb-2">Set saving goals for a secure future.</p>
+            <p className="text-sm text-gray-700 mb-2">
+              Set saving goals for a secure future.
+            </p>
             <div className="flex gap-2">
-              <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Saving</span>
-              <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Goals</span>
+              <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">
+                Saving
+              </span>
+              <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">
+                Goals
+              </span>
             </div>
           </div>
         </div>
@@ -109,7 +167,9 @@ export default function DashboardPage() {
         transition={{ delay: 0.5 }}
         className="py-12 px-6 max-w-5xl mx-auto"
       >
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-900">Budget Overview</h2>
+        <h2 className="text-2xl font-bold mb-6 text-center text-gray-900">
+          Budget Overview
+        </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
           <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-sm">
             <h3 className="text-sm text-gray-500 mb-2">Total Expenses</h3>
@@ -117,7 +177,9 @@ export default function DashboardPage() {
             <p className="text-sm text-red-500">-5%</p>
           </div>
           <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-sm">
-            <h3 className="text-sm text-gray-500 mb-2">Remaining Budget</h3>
+            <h3 className="text-sm text-gray-500 mb-2">
+              Remaining Budget
+            </h3>
             <p className="text-xl font-semibold text-gray-900">$XXXX</p>
             <p className="text-sm text-green-500">+10%</p>
           </div>
@@ -136,16 +198,27 @@ export default function DashboardPage() {
         transition={{ delay: 0.7 }}
         className="py-12 px-6 max-w-5xl mx-auto"
       >
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-900">Saving Recommendations</h2>
+        <h2 className="text-2xl font-bold mb-6 text-center text-gray-900">
+          Saving Recommendations
+        </h2>
         <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="space-y-6">
             {/* Placeholder Recommendation */}
             <div className="border-l-4 border-indigo-500 pl-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Personalized Recommendations</h3>
-              <p className="text-gray-600 mb-2">Add more expense entries to receive personalized saving recommendations based on your spending patterns.</p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Personalized Recommendations
+              </h3>
+              <p className="text-gray-600 mb-2">
+                Add more expense entries to receive personalized saving
+                recommendations based on your spending patterns.
+              </p>
               <div className="flex gap-2">
-                <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Coming Soon</span>
-                <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">Add Expenses</span>
+                <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">
+                  Coming Soon
+                </span>
+                <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">
+                  Add Expenses
+                </span>
               </div>
             </div>
           </div>

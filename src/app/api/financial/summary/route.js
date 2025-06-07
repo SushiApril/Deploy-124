@@ -26,7 +26,7 @@ export async function GET(req) {
   try {
     await client.connect();
     const db = client.db('BudgetingApp');
-    const coll = db.collection('Expenses');  // point at Expenses
+    const coll = db.collection('Transactions');
 
     const docs = await coll
       .find({ userEmail: session.user.email })
