@@ -69,9 +69,30 @@ export default function ExpensePage() {
   const totalAmount = expenses.reduce((sum, x) => sum + x.amount, 0);
   const averageAmount = expenses.length > 0 ? totalAmount / expenses.length : 0;
 
+  // Calculate average per category
+  const categoryAverages = expenses.reduce((acc, expense) => {
+    if (!acc[expense.category]) {
+      acc[expense.category] = { total: 0, count: 0 };
+    }
+    acc[expense.category].total += expense.amount;
+    acc[expense.category].count += 1;
+    return acc;
+  }, {});
+
+  // Calculate final averages per category
+  Object.keys(categoryAverages).forEach(category => {
+    categoryAverages[category] = categoryAverages[category].total / categoryAverages[category].count;
+  });
+
   const getRowColor = (amount) => {
     if (expenses.length === 0) return 'bg-white';
     return amount > averageAmount ? 'bg-red-200' : 'bg-green-200';
+  };
+
+  const shouldShowFlag = (expense) => {
+    const categoryAvg = categoryAverages[expense.category];
+    // Show flag if expense is more than 50% higher than category average
+    return categoryAvg && expense.amount > (categoryAvg * 1.5);
   };
 
   return (
@@ -90,6 +111,9 @@ export default function ExpensePage() {
           <div className="mb-6 p-4 bg-white rounded-lg shadow">
             <p className="text-sm text-gray-600">
               Average Expense: <span className="font-semibold text-gray-800">${averageAmount.toFixed(2)}</span>
+            </p>
+            <p className="text-sm text-gray-600 mt-2">
+              🚩 indicates expenses that are 50% higher than their category average
             </p>
           </div>
         )}
@@ -150,8 +174,22 @@ export default function ExpensePage() {
             {expenses.map((expense) => (
               <tr key={expense._id} className={getRowColor(expense.amount)}>
                 <td className="border px-4 py-2 text-gray-800">{expense.date}</td>
-                <td className="border px-4 py-2 text-gray-800">{expense.description}</td>
-                <td className="border px-4 py-2 text-gray-800">{expense.category}</td>
+                <td className="border px-4 py-2 text-gray-800">
+                  {expense.description}
+                  {shouldShowFlag(expense) && (
+                    <span className="ml-2" title={`This expense is significantly higher than the average for ${expense.category}`}>
+                      🚩
+                    </span>
+                  )}
+                </td>
+                <td className="border px-4 py-2 text-gray-800">
+                  {expense.category}
+                  {shouldShowFlag(expense) && (
+                    <span className="text-sm text-gray-600 ml-2">
+                      (Avg: ${categoryAverages[expense.category].toFixed(2)})
+                    </span>
+                  )}
+                </td>
                 <td className="border px-4 py-2 font-medium text-gray-800">
                   ${expense.amount.toFixed(2)}
                 </td>
