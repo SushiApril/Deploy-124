@@ -67,6 +67,12 @@ export default function ExpensePage() {
   };
 
   const totalAmount = expenses.reduce((sum, x) => sum + x.amount, 0);
+  const averageAmount = expenses.length > 0 ? totalAmount / expenses.length : 0;
+
+  const getRowColor = (amount) => {
+    if (expenses.length === 0) return 'bg-white';
+    return amount > averageAmount ? 'bg-red-200' : 'bg-green-200';
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-12 px-4 sm:px-6 lg:px-8">
@@ -79,6 +85,14 @@ export default function ExpensePage() {
         >
           Expenses
         </motion.h1>
+
+        {expenses.length > 0 && (
+          <div className="mb-6 p-4 bg-white rounded-lg shadow">
+            <p className="text-sm text-gray-600">
+              Average Expense: <span className="font-semibold text-gray-800">${averageAmount.toFixed(2)}</span>
+            </p>
+          </div>
+        )}
 
         <div className="flex justify-end mb-4">
           <button
@@ -134,17 +148,19 @@ export default function ExpensePage() {
           </thead>
           <tbody>
             {expenses.map((expense) => (
-              <tr key={expense._id} className="text-gray-800">
-                <td className="border px-4 py-2">{expense.date}</td>
-                <td className="border px-4 py-2">{expense.description}</td>
-                <td className="border px-4 py-2">{expense.category}</td>
-                <td className="border px-4 py-2">${expense.amount.toFixed(2)}</td>
+              <tr key={expense._id} className={getRowColor(expense.amount)}>
+                <td className="border px-4 py-2 text-gray-800">{expense.date}</td>
+                <td className="border px-4 py-2 text-gray-800">{expense.description}</td>
+                <td className="border px-4 py-2 text-gray-800">{expense.category}</td>
+                <td className="border px-4 py-2 font-medium text-gray-800">
+                  ${expense.amount.toFixed(2)}
+                </td>
               </tr>
             ))}
             {expenses.length > 0 && (
-              <tr className="font-semibold text-gray-900">
-                <td className="border px-4 py-2" colSpan="3">Total</td>
-                <td className="border px-4 py-2">${totalAmount.toFixed(2)}</td>
+              <tr className="font-semibold bg-gray-200">
+                <td className="border px-4 py-2 text-gray-900" colSpan="3">Total</td>
+                <td className="border px-4 py-2 text-gray-900">${totalAmount.toFixed(2)}</td>
               </tr>
             )}
           </tbody>
