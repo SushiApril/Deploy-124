@@ -138,7 +138,7 @@ export default function SummaryPage() {
               className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition"
               whileHover={{ y: -2 }}
             >
-              <div className="text-sm text-gray-500">{k.label}</div>
+              <div className="text-sm text-black">{k.label}</div>
               <div className={`text-2xl font-semibold mt-1 ${k.color}`}> {currency(k.value)}{k.suffix || ''} </div>
             </motion.div>
           ))}
@@ -146,31 +146,62 @@ export default function SummaryPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <motion.div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-lg font-semibold mb-4">Expenses by Category</h3>
+            <h3 className="text-lg font-semibold mb-4 text-black">Expenses by Category</h3>
             {categoryData.length > 0 ? (
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
-                  <Pie data={categoryData} dataKey="value" nameKey="name" outerRadius={80} label>
+                  <Pie 
+                    data={categoryData} 
+                    dataKey="value" 
+                    nameKey="name" 
+                    outerRadius={80} 
+                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                    labelStyle={{ fill: 'black', fontSize: '12px' }}
+                  >
                     {categoryData.map((e, idx) => (
                       <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={val => currency(val)} />
+                  <Tooltip 
+                    formatter={val => currency(val)}
+                    contentStyle={{ 
+                      backgroundColor: 'white',
+                      border: '1px solid #ccc',
+                      color: 'black'
+                    }}
+                    labelStyle={{ color: 'black' }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <p className="text-gray-500">No expenses</p>
+              <p className="text-black">No expenses</p>
             )}
           </motion.div>
 
           <motion.div className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-lg font-semibold mb-4">Income vs Expense Over Time</h3>
+            <h3 className="text-lg font-semibold mb-4 text-black">Income vs Expense Over Time</h3>
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={timeline} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                <XAxis dataKey="date" tickFormatter={dateFormatter} />
-                <YAxis />
-                <Tooltip formatter={val => currency(val)} />
-                <Legend />
+                <XAxis 
+                  dataKey="date" 
+                  tickFormatter={dateFormatter}
+                  tick={{ fill: 'black' }}
+                />
+                <YAxis 
+                  tick={{ fill: 'black' }}
+                />
+                <Tooltip 
+                  formatter={val => currency(val)}
+                  contentStyle={{ 
+                    backgroundColor: 'white',
+                    border: '1px solid #ccc',
+                    color: 'black'
+                  }}
+                  labelStyle={{ color: 'black' }}
+                />
+                <Legend 
+                  wrapperStyle={{ color: 'black' }}
+                />
                 <Line type="monotone" dataKey="income" stroke="#22c55e" dot={false} name="Income" />
                 <Line type="monotone" dataKey="expense" stroke="#ef4444" dot={false} name="Expense" />
               </LineChart>
@@ -188,20 +219,40 @@ export default function SummaryPage() {
               {showAll ? 'Show Less' : 'Show All'}
             </button>
           </div>
-          <ul className="space-y-2 max-h-64 overflow-y-auto">
-            {(showAll ? filteredTx : filteredTx.slice(0, 5))
+          <div className="space-y-4">
+            {(showAll ? transactions : transactions.slice(0, 5))
               .sort((a, b) => new Date(b.date) - new Date(a.date))
-              .map((tx, i) => (
-                <li key={i} className="flex justify-between text-sm">
-                  <span>
-                    {dateFormatter(tx.date)} — {tx.description}
-                  </span>
-                  <span className={tx.type === 'income' ? 'text-green-600' : 'text-red-600'}>
-                    {tx.type === 'income' ? '+' : '-'}{currency(tx.amount)}
-                  </span>
-                </li>
+              .map((transaction) => (
+                <div key={transaction._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2 rounded-full ${transaction.type === 'income' ? 'bg-green-100' : 'bg-red-100'}`}>
+                      {transaction.type === 'income' ? (
+                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                        </svg>
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium text-black">{transaction.description}</p>
+                      <p className="text-sm text-black">{new Date(transaction.date).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`font-semibold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                      {transaction.type === 'income' ? '+' : '-'}{currency(transaction.amount)}
+                    </p>
+                    <p className="text-sm text-black">{transaction.category}</p>
+                  </div>
+                </div>
               ))}
-          </ul>
+            {transactions.length === 0 && (
+              <p className="text-black">No transactions</p>
+            )}
+          </div>
         </motion.div>
       </div>
     </div>
