@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import useSWR from 'swr';
 import { motion } from 'framer-motion';
-import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 const fetcher = (url) =>
   fetch(url, { credentials: 'include' })
