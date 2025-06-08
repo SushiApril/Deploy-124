@@ -76,6 +76,11 @@ export default function DashboardPage() {
   const monthlyExpenses = thisMonthsTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
   const monthlyBalance = monthlyIncome - monthlyExpenses;
 
+  // Find the biggest expense this month
+  const biggestExpense = thisMonthsTransactions
+    .filter(t => t.type === 'expense')
+    .reduce((max, current) => current.amount > (max?.amount || 0) ? current : max, null);
+
   const savingsRate = monthlyIncome ? ((monthlyBalance / monthlyIncome) * 100) : 0;
   const cappedSavings = Math.min(savingsRate, 50);
   const financialHealthScore = Math.round((cappedSavings / 50) * 100);
@@ -172,11 +177,30 @@ export default function DashboardPage() {
           <h2 className="text-2xl font-bold mb-4 text-gray-900">Saving Recommendations</h2>
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h3 className="font-semibold text-gray-900 mb-2">Personalized Recommendations</h3>
-            <p className="text-sm text-gray-700 mb-4">
-              Add more expense entries to receive personalized saving recommendations based on your spending patterns.
-            </p>
+            {biggestExpense ? (
+              <>
+                <div className="mb-4 p-4 bg-red-50 rounded-lg border border-red-100">
+                  <h4 className="font-medium text-red-800 mb-2">Biggest Expense This Month</h4>
+                  <p className="text-sm text-gray-700">
+                    Your largest expense was <span className="font-semibold text-red-600">${biggestExpense.amount.toFixed(2)}</span> for {biggestExpense.description} on {new Date(biggestExpense.date).toLocaleDateString()}.
+                  </p>
+                  {biggestExpense.category && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      Category: <span className="font-medium">{biggestExpense.category}</span>
+                    </p>
+                  )}
+                </div>
+                <p className="text-sm text-gray-700 mb-4">
+                  Consider reviewing your spending patterns and look for opportunities to reduce expenses in this category.
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-gray-700 mb-4">
+                Add more expense entries to receive personalized saving recommendations based on your spending patterns.
+              </p>
+            )}
             <div className="flex gap-2">
-              <span className="bg-gray-200 px-2 py-1 rounded text-xs">Coming Soon</span>
+              {!biggestExpense && <span className="bg-gray-200 px-2 py-1 rounded text-xs">Coming Soon</span>}
               <Link href="/expense">
                 <button className="bg-indigo-600 text-white px-4 py-1 rounded text-sm">Add Expenses</button>
               </Link>
